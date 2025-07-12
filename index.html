@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rain and Thunder Sounds</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js CDN for audio synthesis (for AI-generated sound) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        /* All CSS styles are embedded here */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            flex-direction: column;
+            overflow: hidden; /* Prevent scrollbars from hidden iframes */
+        }
+        .container {
+            background-color: #2d3748; /* Darker container background */
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+        }
+        .button {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            outline: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+        }
+        .button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .rain-button {
+            background-color: #4299e1; /* Blue */
+            color: white;
+        }
+        .rain-button:hover {
+            background-color: #3182ce;
+        }
+        .thunder-button {
+            background-color: #805ad5; /* Purple */
+            color: white;
+        }
+        .thunder-button:hover {
+            background-color: #6b46c1;
+        }
+        .combined-button {
+            background-color: #38a169; /* Green */
+            color: white;
+        }
+        .combined-button:hover {
+            background-color: #2f855a;
+        }
+        .stop-button {
+            background-color: #e53e3e; /* Red */
+            color: white;
+        }
+        .stop-button:hover {
+            background-color: #c53030;
+        }
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4a5568;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+        .message-box.show {
+            opacity: 1;
+        }
+        /* Hidden YouTube iframes */
+        .hidden-youtube-player {
+            position: absolute;
+            left: -9999px; /* Move off-screen */
+            top: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+        }
+        .feedback-section {
+            background-color: #3a475a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: left;
+            width: 100%;
+        }
+        .feedback-section textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #4a5568;
+            background-color: #2d3748;
+            color: #e2e8f0;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        .feedback-section button {
+            width: 100%;
+            background-color: #63b3ed;
+            color: white;
+        }
+        .feedback-section button:hover {
+            background-color: #4299e1;
+        }
+        .gemini-params-display {
+            font-size: 0.8em;
+            color: #a0aec0;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+        .slider-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .slider-container input[type="range"] {
+            width: 90%;
+            -webkit-appearance: none;
+            height: 8px;
+            /* Updated: Background for the entire track with a gradient */
+            background: linear-gradient(to right, #e53e3e 0%, #f6ad55 50%, #38a169 100%);
+            outline: none;
+            border-radius: 5px;
+            opacity: 0.9; /* Slightly less opaque to show gradient clearly */
+            transition: opacity .2s;
+        }
+        .slider-container input[type="range"]:hover {
+            opacity: 1;
+        }
+        /* Style for WebKit browsers (Chrome, Safari) */
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            background: transparent; /* Make the default track transparent to show the input's background */
+            border-radius: 5px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #63b3ed; /* Keep thumb blue */
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            margin-top: -6px; /* Adjust to center thumb vertically on the track */
+        }
+        /* Style for Firefox */
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            background: transparent; /* Make the default track transparent to show the input's background */
+            border-radius: 5px;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #63b3ed; /* Keep thumb blue */
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.8em;
+            color: #a0aec0;
+        }
+        #applySliderFeedback, #submitDetailedFeedbackButton {
+            margin-top: 15px;
+            background-color: #63b3ed;
+            color: white;
+            display: none; /* Hidden by default */
+        }
+        #applySliderFeedback:hover, #submitDetailedFeedbackButton:hover {
+            background-color: #4299e1;
+        }
+        .gemini-feature-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .gemini-feature-buttons .button {
+            background-color: #f6ad55; /* Orange for Gemini features */
+            color: #2d3748;
+        }
+        .gemini-feature-buttons .button:hover {
+            background-color: #ed8936;
+        }
+        .gemini-output-display {
+            background-color: #4a5568;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 0.9em;
+            color: #e2e8f0;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold mb-4">Nature Sounds</h1>
+        <p class="text-sm text-gray-400 mb-6">Experience the calming sounds of nature.</p>
+
+        <button id="playRain" class="button rain-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-rain"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/></svg>
+            Play Rain (YouTube)
+        </button>
+        <button id="playThunder" class="button thunder-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud-lightning"><path d="M6 16.326A7 7 0 1 1 15.71 6h1.79a4.5 4.5 0 0 1 .5 8.664"/><path d="m13 10-4 6h6l-4 6"/></svg>
+            Play Thunder (YouTube)
+        </button>
+        <button id="playCombined" class="button combined-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon-star"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/><path d="M16.5 7.5 15 9l-1.5-1.5L12 6l1.5-1.5L15 3l1.5 1.5L18 6l-1.5 1.5Z"/><path d="M7.5 16.5 6 18l-1.5-1.5L3 15l1.5-1.5L6 12l1.5 1.5L9 15l-1.5 1.5Z"/></svg>
+            Play Gemini Rain & Thunder (Sleep)
+        </button>
+        <button id="stopAll" class="button stop-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+            Stop All Sounds
+        </button>
+
+        <div class="feedback-section">
+            <h2 class="text-xl font-semibold mb-2">Refine Gemini Sleep Sound</h2>
+            <p class="text-sm text-gray-400 mb-3">Adjust the slider to indicate your sleep quality. Then, click 'Apply'.</p>
+            <div class="slider-container">
+                <label for="sleepQualitySlider">How well did you sleep?</label>
+                <input type="range" id="sleepQualitySlider" min="0" max="100" value="50" step="1">
+                <div class="slider-labels">
+                    <span>Terrible</span>
+                    <span>Perfect</span>
+                </div>
+                <button id="applySliderFeedback" class="button">Apply Slider Feedback</button>
+            </div>
+            
+            <h2 class="text-xl font-semibold mb-2 mt-6">Detailed Feedback</h2>
+            <p class="text-sm text-gray-400 mb-3">Optional: Tell us more. Gemini will learn from your specific comments!</p>
+            <textarea id="sleepFeedback" placeholder="e.g., 'The thunder was a bit too loud, but the rain was perfect. I felt rested.'"></textarea>
+            <button id="submitDetailedFeedbackButton" class="button">Submit Detailed Feedback</button>
+            <div id="geminiParamsDisplay" class="gemini-params-display"></div>
+
+            <div class="gemini-feature-buttons">
+                <button id="describeSoundscape" class="button">✨ Describe Soundscape</button>
+                <button id="whyThisSound" class="button">✨ Why This Sound?</button>
+            </div>
+            <div id="geminiOutput" class="gemini-output-display">
+                Gemini's insights will appear here.
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden YouTube Player containers -->
+    <div id="rainPlayerContainer" class="hidden-youtube-player"></div>
+    <div id="thunderPlayerContainer" class="hidden-youtube-player"></div>
+
+    <!-- Message Box for alerts -->
+    <div id="messageBox" class="message-box"></div>
+
+    <script>
+        // Load the YouTube IFrame Player API asynchronously.
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        // Global variables for YouTube players and Tone.js state
+        let rainPlayer;
+        let thunderPlayer;
+        let isRainPlaying = false;
+        let isThunderPlaying = false;
+        let isGeminiSoundPlaying = false;
+
+        // Store Gemini parameters as state variables with a baseline for "perfect" and "terrible"
+        let geminiParams = {
+            rainVolume: -25, // Current rain volume (dB)
+            thunderVolume: -40, // Current thunder volume (dB)
+            rainFilterFreq: 2500, // Current rain filter frequency (Hz)
+            thunderFilterFreq: 100, // Current thunder filter frequency (Hz)
+            rainLFOFreq: 0.08, // Rain LFO frequency (Hz)
+            thunderLFOFreq: 0.01, // Thunder LFO frequency (Hz)
+            rainLFODepth: 10, // Rain LFO depth (dB)
+            thunderLFODepth: 15 // Thunder LFO depth (dB)
+        };
+
+        // YouTube video IDs for high-quality looping sounds
+        const RAIN_VIDEO_ID = 'yMRoNNKWuqQ'; // Updated Rain Video ID
+        const THUNDER_VIDEO_ID = '43U0lA-aBa4'; // Updated Thunder Video ID
+
+        // Tone.js setup for the "Gemini-synthesized" sleep sound
+        const geminiRainNoise = new Tone.Noise("white");
+        const geminiRainFilter = new Tone.Filter(2500, "lowpass");
+        geminiRainNoise.connect(geminiRainFilter);
+        geminiRainFilter.toDestination();
+
+        const geminiRainVolumeLFO = new Tone.LFO(0.08, -30, -20);
+        geminiRainVolumeLFO.connect(geminiRainNoise.volume);
+
+        const geminiThunderNoise = new Tone.Noise("brown");
+        const geminiThunderFilter = new Tone.Filter(100, "lowpass");
+        geminiThunderNoise.connect(geminiThunderFilter);
+        geminiThunderFilter.toDestination();
+
+        const geminiThunderVolumeLFO = new Tone.LFO(0.01, -50, -35);
+        geminiThunderVolumeLFO.connect(geminiThunderNoise.volume);
+
+        // Define the range for each parameter from "Terrible" (0) to "Perfect" (100)
+        const PARAM_RANGES = {
+            rainVolume: { terrible: -10, perfect: -35 }, // Quieter for perfect
+            thunderVolume: { terrible: -15, perfect: -50 }, // Quieter for perfect
+            rainFilterFreq: { terrible: 4000, perfect: 1500 }, // Mellow for perfect
+            thunderFilterFreq: { terrible: 200, perfect: 50 }, // Deeper for perfect
+            rainLFOFreq: { terrible: 0.2, perfect: 0.05 }, // Slower modulation for perfect
+            thunderLFOFreq: { terrible: 0.05, perfect: 0.005 }, // Slower modulation for perfect
+            rainLFODepth: { terrible: 20, perfect: 5 }, // Less dynamic for perfect
+            thunderLFODepth: { terrible: 30, perfect: 5 } // Less dynamic for perfect
+        };
+
+        // Function to interpolate a value based on slider position (0-100)
+        function interpolate(value, terribleVal, perfectVal) {
+            const ratio = value / 100;
+            return terribleVal + ratio * (perfectVal - terribleVal);
+        }
+
+        // Function to apply Gemini parameters to Tone.js synths
+        function applyGeminiParameters() {
+            geminiRainNoise.volume.value = geminiParams.rainVolume;
+            geminiRainFilter.frequency.value = geminiParams.rainFilterFreq;
+            geminiRainVolumeLFO.frequency.value = geminiParams.rainLFOFreq;
+            geminiRainVolumeLFO.min = geminiParams.rainVolume - geminiParams.rainLFODepth / 2;
+            geminiRainVolumeLFO.max = geminiParams.rainVolume + geminiParams.rainLFODepth / 2;
+
+            geminiThunderNoise.volume.value = geminiParams.thunderVolume;
+            geminiThunderFilter.frequency.value = geminiParams.thunderFilterFreq;
+            geminiThunderVolumeLFO.frequency.value = geminiParams.thunderLFOFreq;
+            geminiThunderVolumeLFO.min = geminiParams.thunderVolume - geminiParams.thunderLFODepth / 2;
+            geminiThunderVolumeLFO.max = geminiParams.thunderVolume + geminiParams.thunderLFODepth / 2;
+
+            updateGeminiParamsDisplay();
+            console.log("Gemini Parameters Applied:", geminiParams); // Log parameters
+        }
+
+        // Function to update the Gemini parameters display
+        function updateGeminiParamsDisplay() {
+            const display = document.getElementById('geminiParamsDisplay');
+            display.textContent = `Gemini Settings: Rain Vol: ${geminiParams.rainVolume.toFixed(1)}dB, Thunder Vol: ${geminiParams.thunderVolume.toFixed(1)}dB, Rain Filter: ${geminiParams.rainFilterFreq.toFixed(0)}Hz, Thunder Filter: ${geminiParams.thunderFilterFreq.toFixed(0)}Hz`;
+        }
+
+        // Function to display messages in a custom message box
+        function showMessage(message) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = message;
+            messageBox.classList.add('show');
+            setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 3000);
+        }
+
+        // Function to display Gemini output
+        function displayGeminiOutput(message) {
+            const outputDiv = document.getElementById('geminiOutput');
+            outputDiv.innerHTML = message;
+        }
+
+        // Function to show loading spinner
+        function showLoadingSpinner(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading-spinner"></div> Loading...';
+            element.style.display = 'flex';
+            element.style.justifyContent = 'center';
+            element.style.alignItems = 'center';
+        }
+
+        // Function to hide loading spinner and show content
+        function hideLoadingSpinner(elementId, content) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = content;
+            element.style.display = 'block';
+        }
+
+        // This function creates YouTube players when the API is ready.
+        function onYouTubeIframeAPIReady() {
+            console.log("YouTube IFrame API is ready.");
+            // Create Rain Player
+            rainPlayer = new YT.Player('rainPlayerContainer', {
+                videoId: RAIN_VIDEO_ID,
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'loop': 1,
+                    'playlist': RAIN_VIDEO_ID,
+                    'modestbranding': 1,
+                    'disablekb': 1,
+                    'fs': 0,
+                    'iv_load_policy': 3,
+                    'rel': 0
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onRainPlayerStateChange
+                }
+            });
+
+            // Create Thunder Player
+            thunderPlayer = new YT.Player('thunderPlayerContainer', {
+                videoId: THUNDER_VIDEO_ID,
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'loop': 1,
+                    'playlist': THUNDER_VIDEO_ID,
+                    'modestbranding': 1,
+                    'disablekb': 1,
+                    'fs': 0,
+                    'iv_load_policy': 3,
+                    'rel': 0
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onThunderPlayerStateChange
+                }
+            });
+
+            showMessage("YouTube players are ready. Click buttons to play sounds.");
+            applyGeminiParameters(); // Apply initial Gemini parameters and display them
+        }
+
+        // The API will call this function when the video player is ready.
+        function onPlayerReady(event) {
+            console.log(`Player for video ID ${event.target.getVideoData().video_id} is ready.`);
+        }
+
+        // Event handler for rain player state changes (for looping)
+        function onRainPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED && isRainPlaying) {
+                rainPlayer.seekTo(0);
+                rainPlayer.playVideo();
+            }
+        }
+
+        // Event handler for thunder player state changes (for looping)
+        function onThunderPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED && isThunderPlaying) {
+                thunderPlayer.seekTo(0);
+                thunderPlayer.playVideo();
+            }
+        }
+
+        // Function to stop all sounds
+        function stopAllSounds() {
+            if (rainPlayer && isRainPlaying) {
+                rainPlayer.stopVideo();
+                isRainPlaying = false;
+                console.log("YouTube Rain stopped.");
+            }
+            if (thunderPlayer && isThunderPlaying) {
+                thunderPlayer.stopVideo();
+                isThunderPlaying = false;
+                console.log("YouTube Thunder stopped.");
+            }
+            if (isGeminiSoundPlaying) {
+                geminiRainNoise.stop();
+                geminiRainVolumeLFO.stop(); // Stop LFOs when sound stops
+                geminiThunderNoise.stop();
+                geminiThunderVolumeLFO.stop(); // Stop LFOs when sound stops
+                isGeminiSoundPlaying = false;
+                console.log("Gemini Sleep Sound stopped.");
+            }
+        }
+
+        // Event listener for Play Rain button
+        document.getElementById('playRain').addEventListener('click', async () => {
+            stopAllSounds();
+            if (rainPlayer) {
+                if (!isRainPlaying) {
+                    await Tone.start(); // Ensure audio context is running for YouTube too if needed
+                    rainPlayer.playVideo();
+                    isRainPlaying = true;
+                    showMessage("Playing rain sounds (YouTube)...");
+                    console.log("Attempting to play YouTube Rain.");
+                } else {
+                    rainPlayer.pauseVideo();
+                    isRainPlaying = false;
+                    showMessage("Rain sounds paused.");
+                    console.log("Pausing YouTube Rain.");
+                }
+            } else {
+                showMessage("YouTube rain player not ready yet. Please wait.");
+                console.warn("YouTube rain player not ready.");
+            }
+        });
+
+        // Event listener for Play Thunder button
+        document.getElementById('playThunder').addEventListener('click', async () => {
+            stopAllSounds();
+            if (thunderPlayer) {
+                if (!isThunderPlaying) {
+                    await Tone.start(); // Ensure audio context is running for YouTube too if needed
+                    thunderPlayer.playVideo();
+                    isThunderPlaying = true;
+                    showMessage("Playing thunder sound (YouTube)...");
+                    console.log("Attempting to play YouTube Thunder.");
+                } else {
+                    thunderPlayer.pauseVideo();
+                    isThunderPlaying = false;
+                    showMessage("Thunder sounds paused.");
+                    console.log("Pausing YouTube Thunder.");
+                }
+            } else {
+                showMessage("YouTube thunder player not ready yet. Please wait.");
+                console.warn("YouTube thunder player not ready.");
+            }
+        });
+
+        // Event listener for Play Gemini Sleep Sound button
+        document.getElementById('playCombined').addEventListener('click', async () => {
+            stopAllSounds();
+            try {
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                    console.log("Tone.js AudioContext started.");
+                }
+                if (isGeminiSoundPlaying) {
+                    geminiRainNoise.stop();
+                    geminiRainVolumeLFO.stop();
+                    geminiThunderNoise.stop();
+                    geminiThunderVolumeLFO.stop();
+                    isGeminiSoundPlaying = false;
+                    showMessage("Gemini Rain & Thunder (Sleep) paused.");
+                    console.log("Pausing Gemini Sleep Sound.");
+                } else {
+                    applyGeminiParameters(); // Apply current Gemini parameters before starting
+                    geminiRainNoise.start();
+                    geminiRainVolumeLFO.start();
+                    geminiThunderNoise.start();
+                    geminiThunderVolumeLFO.start();
+                    isGeminiSoundPlaying = true;
+                    showMessage("Playing Gemini-synthesized Rain & Thunder (Sleep)...");
+                    console.log("Attempting to play Gemini Sleep Sound.");
+                }
+            } catch (error) {
+                showMessage("Error starting Gemini sound. Check console.");
+                console.error("Error starting Tone.js AudioContext or Gemini sound:", error);
+            }
+        });
+
+        // Event listener for Stop All Sounds button
+        document.getElementById('stopAll').addEventListener('click', () => {
+            stopAllSounds();
+            showMessage("All sounds stopped.");
+        });
+
+        // Current slider value storage
+        var currentSliderValue = 50; // Default to middle
+
+        // --- Detailed Feedback (Text Input) Logic ---
+        let typingTimer; // Timer for detecting when user stops typing
+        const doneTypingInterval = 5000; // 5 seconds
+
+        const sleepFeedbackTextarea = document.getElementById('sleepFeedback');
+        const submitDetailedFeedbackButton = document.getElementById('submitDetailedFeedbackButton');
+
+        // Hide the button initially
+        submitDetailedFeedbackButton.style.display = 'none';
+
+        sleepFeedbackTextarea.addEventListener('input', () => {
+            clearTimeout(typingTimer); // Clear existing timer
+            if (sleepFeedbackTextarea.value.length > 0) { // Only show if there's text
+                typingTimer = setTimeout(() => {
+                    submitDetailedFeedbackButton.style.display = 'block'; // Show button after delay
+                }, doneTypingInterval);
+            } else {
+                submitDetailedFeedbackButton.style.display = 'none'; // Hide if text is cleared
+            }
+        });
+
+        submitDetailedFeedbackButton.addEventListener('click', async () => {
+            const feedbackText = sleepFeedbackTextarea.value.toLowerCase();
+            submitDetailedFeedbackButton.style.display = 'none'; // Hide button immediately on click
+            showLoadingSpinner('geminiOutput');
+            
+            let prompt = `Analyze the following sleep feedback and suggest adjustments to rain and thunder sound parameters for optimal sleep. The current parameters are:
+            Rain Volume: ${geminiParams.rainVolume.toFixed(1)}dB
+            Thunder Volume: ${geminiParams.thunderVolume.toFixed(1)}dB
+            Rain Filter Frequency: ${geminiParams.rainFilterFreq.toFixed(0)}Hz
+            Thunder Filter Frequency: ${geminiParams.thunderFilterFreq.toFixed(0)}Hz
+            Rain LFO Frequency: ${geminiParams.rainLFOFreq.toFixed(2)}Hz
+            Thunder LFO Frequency: ${geminiParams.thunderLFOFreq.toFixed(3)}Hz
+            Rain LFO Depth: ${geminiParams.rainLFODepth.toFixed(1)}dB
+            Thunder LFO Depth: ${geminiParams.thunderLFODepth.toFixed(1)}dB
+
+            Feedback: "${feedbackText}"
+
+            Suggest new values for these parameters. Only provide the new parameters in a JSON object format. Do not include any other text.
+            Example JSON:
+            {
+                "rainVolume": -20,
+                "thunderVolume": -30,
+                "rainFilterFreq": 3000,
+                "thunderFilterFreq": 150,
+                "rainLFOFreq": 0.1,
+                "thunderLFOFreq": 0.02,
+                "rainLFODepth": 15,
+                "thunderLFODepth": 20
+            }
+            Ensure all values are within reasonable ranges for sleep sounds.
+            `;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = {
+                    contents: chatHistory,
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                "rainVolume": { "type": "NUMBER" },
+                                "thunderVolume": { "type": "NUMBER" },
+                                "rainFilterFreq": { "type": "NUMBER" },
+                                "thunderFilterFreq": { "type": "NUMBER" },
+                                "rainLFOFreq": { "type": "NUMBER" },
+                                "thunderLFOFreq": { "type": "NUMBER" },
+                                "rainLFODepth": { "type": "NUMBER" },
+                                "thunderLFODepth": { "type": "NUMBER" }
+                            }
+                        }
+                    }
+                };
+                const apiKey = ""; // Canvas will automatically provide it in runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const jsonString = result.candidates[0].content.parts[0].text;
+                    const newParams = JSON.parse(jsonString);
+
+                    // Apply the new parameters, ensuring they stay within reasonable bounds
+                    geminiParams.rainVolume = Math.max(PARAM_RANGES.rainVolume.perfect, Math.min(PARAM_RANGES.rainVolume.terrible, newParams.rainVolume));
+                    geminiParams.thunderVolume = Math.max(PARAM_RANGES.thunderVolume.perfect, Math.min(PARAM_RANGES.thunderVolume.terrible, newParams.thunderVolume));
+                    geminiParams.rainFilterFreq = Math.max(PARAM_RANGES.rainFilterFreq.perfect, Math.min(PARAM_RANGES.rainFilterFreq.terrible, newParams.rainFilterFreq));
+                    geminiParams.thunderFilterFreq = Math.max(PARAM_RANGES.thunderFilterFreq.perfect, Math.min(PARAM_RANGES.thunderFilterFreq.terrible, newParams.thunderFilterFreq));
+                    geminiParams.rainLFOFreq = Math.max(PARAM_RANGES.rainLFOFreq.perfect, Math.min(PARAM_RANGES.rainLFOFreq.terrible, newParams.rainLFOFreq));
+                    geminiParams.thunderLFOFreq = Math.max(PARAM_RANGES.thunderLFOFreq.perfect, Math.min(PARAM_RANGES.thunderLFOFreq.terrible, newParams.thunderLFOFreq));
+                    geminiParams.rainLFODepth = Math.max(PARAM_RANGES.rainLFODepth.perfect, Math.min(PARAM_RANGES.rainLFODepth.terrible, newParams.rainLFODepth));
+                    geminiParams.thunderLFODepth = Math.max(PARAM_RANGES.thunderLFODepth.perfect, Math.min(PARAM_RANGES.thunderLFODepth.terrible, newParams.thunderLFODepth));
+
+                    if (isGeminiSoundPlaying) {
+                        applyGeminiParameters();
+                    }
+                    hideLoadingSpinner('geminiOutput', "Gemini has optimized the sound based on your feedback!");
+                    showMessage("Gemini: Sound optimized based on detailed feedback.");
+
+                } else {
+                    hideLoadingSpinner('geminiOutput', "Gemini couldn't process the feedback. Try again.");
+                    showMessage("Gemini: Failed to process feedback.");
+                }
+            } catch (error) {
+                hideLoadingSpinner('geminiOutput', "Error communicating with Gemini. See console for details.");
+                showMessage("Gemini: Error processing feedback.");
+                console.error("Error calling Gemini API for detailed feedback:", error);
+            }
+            sleepFeedbackTextarea.value = ''; // Clear feedback
+        });
+
+        // Current slider value storage
+        var currentSliderValue = 50; // Default to middle
+
+        // Gemini Feedback Processing (Slider Input)
+        document.getElementById('sleepQualitySlider').addEventListener('input', (event) => {
+            currentSliderValue = parseInt(event.target.value); // Store the current slider value
+            document.getElementById('applySliderFeedback').style.display = 'block'; // Show the apply button
+            showMessage(`Slider adjusted to ${currentSliderValue}%. Click 'Apply Slider Feedback' to optimize.`);
+        });
+
+        // New event listener for the Apply Slider Feedback button
+        document.getElementById('applySliderFeedback').addEventListener('click', () => {
+            // This is where Gemini optimizes based on the slider value
+            optimizeGeminiSound(currentSliderValue);
+            document.getElementById('applySliderFeedback').style.display = 'none'; // Hide the button after applying
+        });
+
+        // Function for Gemini to optimize sound based on slider value
+        function optimizeGeminiSound(sliderValue) {
+            // Interpolate ALL parameters based on the slider value
+            geminiParams.rainVolume = interpolate(sliderValue, PARAM_RANGES.rainVolume.terrible, PARAM_RANGES.rainVolume.perfect);
+            geminiParams.thunderVolume = interpolate(sliderValue, PARAM_RANGES.thunderVolume.terrible, PARAM_RANGES.thunderVolume.perfect);
+            geminiParams.rainFilterFreq = interpolate(sliderValue, PARAM_RANGES.rainFilterFreq.terrible, PARAM_RANGES.rainFilterFreq.perfect);
+            geminiParams.thunderFilterFreq = interpolate(sliderValue, PARAM_RANGES.thunderFilterFreq.terrible, PARAM_RANGES.thunderFilterFreq.perfect);
+            geminiParams.rainLFOFreq = interpolate(sliderValue, PARAM_RANGES.rainLFOFreq.terrible, PARAM_RANGES.rainLFOFreq.perfect);
+            geminiParams.thunderLFOFreq = interpolate(sliderValue, PARAM_RANGES.thunderLFOFreq.terrible, PARAM_RANGES.thunderLFOFreq.perfect);
+            geminiParams.rainLFODepth = interpolate(sliderValue, PARAM_RANGES.rainLFODepth.terrible, PARAM_RANGES.rainLFODepth.perfect);
+            geminiParams.thunderLFODepth = interpolate(sliderValue, PARAM_RANGES.thunderLFODepth.terrible, PARAM_RANGES.thunderLFODepth.perfect);
+
+            if (isGeminiSoundPlaying) {
+                applyGeminiParameters(); // Apply changes immediately if Gemini sound is playing
+            }
+            showMessage(`Gemini: Optimized sound based on slider value (${sliderValue}%).`);
+        }
+
+        // --- Gemini LLM Feature Buttons ---
+        document.getElementById('describeSoundscape').addEventListener('click', async () => {
+            showLoadingSpinner('geminiOutput');
+            const prompt = `You are a soundscape artist. Describe a rain and thunder soundscape with the following characteristics, focusing on how it might feel or sound for relaxation and sleep:
+            Rain Volume: ${geminiParams.rainVolume.toFixed(1)}dB
+            Thunder Volume: ${geminiParams.thunderVolume.toFixed(1)}dB
+            Rain Filter Frequency: ${geminiParams.rainFilterFreq.toFixed(0)}Hz (describes brightness/mellow-ness)
+            Thunder Filter Frequency: ${geminiParams.thunderFilterFreq.toFixed(0)}Hz (describes depth/rumble)
+            Keep it concise, around 2-3 sentences. Use evocative language.`;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Canvas will automatically provide it in runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    hideLoadingSpinner('geminiOutput', text);
+                } else {
+                    hideLoadingSpinner('geminiOutput', "Gemini couldn't generate a description.");
+                }
+            } catch (error) {
+                hideLoadingSpinner('geminiOutput', "Error fetching description from Gemini.");
+                console.error("Error calling Gemini API for soundscape description:", error);
+            }
+        });
+
+        document.getElementById('whyThisSound').addEventListener('click', async () => {
+            showLoadingSpinner('geminiOutput');
+            const prompt = `Explain briefly, in 2-3 sentences, why a soundscape with gentle rain and deep, subtle thunder can be optimal for sleep. Focus on the scientific or psychological reasons.
+            Current Rain characteristics: like white noise with mellow high frequencies (Rain Filter Frequency: ${geminiParams.rainFilterFreq.toFixed(0)}Hz, Rain Volume: ${geminiParams.rainVolume.toFixed(1)}dB).
+            Current Thunder characteristics: deep, subtle rumble (Thunder Filter Frequency: ${geminiParams.thunderFilterFreq.toFixed(0)}Hz, Thunder Volume: ${geminiParams.thunderVolume.toFixed(1)}dB).`;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Canvas will automatically provide it in runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    hideLoadingSpinner('geminiOutput', text);
+                } else {
+                    hideLoadingSpinner('geminiOutput', "Gemini couldn't generate an explanation.");
+                }
+            } catch (error) {
+                hideLoadingSpinner('geminiOutput', "Error fetching explanation from Gemini.");
+                console.error("Error calling Gemini API for sound explanation:", error);
+            }
+        });
+
+        // Initial display of Gemini parameters
+        updateGeminiParamsDisplay();
+    </script>
+</body>
+</html>
